@@ -2,8 +2,9 @@ name: kamco-menu
 
 on:
   schedule:
-    - cron: "30,45 1 * * 1-5"   # 평일 KST 10:30, 10:45 (메뉴 전송, 두 번째는 예비)
-    - cron: "0 * * * *"         # 매시 정각 (네이버 소식 확인 + 봇에 보낸 사진 수신)
+    - cron: "0 23 * * 0-4"      # 평일 KST 08:00 시작, 13:30까지 대기 모드 (바로 답장 + 10:30 전송)
+    - cron: "30,45 1 * * 1-5"   # 평일 KST 10:30, 10:45 (대기 모드가 실패했을 때 예비)
+    - cron: "0 * * * *"         # 매시 정각 (네이버 확인, 방 등록, 질문 답장)
   workflow_dispatch:            # Actions 탭에서 수동 실행
 
 permissions:
@@ -16,13 +17,20 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - run: python bot.py
+      - name: Run bot
+        run: |
+          if [ "${{ github.event.schedule }}" = "0 23 * * 0-4" ]; then
+            python bot.py listen
+          else
+            python bot.py
+          fi
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
