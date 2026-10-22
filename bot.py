@@ -17,13 +17,17 @@ from urllib.parse import parse_qs, unquote, urlparse
 import requests
 from PIL import Image, ImageOps
 
-TG_TOKEN = os.environ["TELEGRAM_TOKEN"]
-ANTHROPIC_KEY = os.environ["ANTHROPIC_API_KEY"]
-ADMIN_ID = int(os.environ["ADMIN_ID"])                 # 관리자 (나)
-CHAT_ID = os.environ.get("CHAT_ID") or str(ADMIN_ID)   # 메뉴 받을 곳 (나 / 그룹 / @채널)
-PLACE_ID = os.environ.get("NAVER_PLACE_ID") or "1125744770"
-MODEL = os.environ.get("CLAUDE_MODEL") or "claude-sonnet-5-5"
-SEND_AFTER = os.environ.get("SEND_AFTER") or "10:30"   # 메뉴 보내는 시각 (KST)
+def env(name, default=""):
+    return (os.environ.get(name) or default).strip()  # Secrets에 딸려 들어간 줄바꿈 제거
+
+
+TG_TOKEN = env("TELEGRAM_TOKEN")
+ANTHROPIC_KEY = env("ANTHROPIC_API_KEY")
+ADMIN_ID = int(env("ADMIN_ID"))                        # 관리자 (나)
+CHAT_ID = env("CHAT_ID") or str(ADMIN_ID)              # 메뉴 받을 곳 (나 / 그룹 / @채널)
+PLACE_ID = env("NAVER_PLACE_ID", "1125744770")
+MODEL = env("CLAUDE_MODEL", "claude-sonnet-5-5")
+SEND_AFTER = env("SEND_AFTER", "10:30")                # 메뉴 보내는 시각 (KST)
 STATE_FILE = "state.json"
 
 KST = dt.timezone(dt.timedelta(hours=9))
@@ -77,7 +81,7 @@ def load_state():
             state = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         state = {}
-    for key, default in (("offset", 0), ("menu", {}), ("sent", {}), ("naver_seen", []), ("naver_alert", "")):
+    for key, default in (("offset", 0), ("menu", {}), ("sent", {}), ("naver_read", []), ("naver_alert", "")):
         state.setdefault(key, default)
     return state
 
@@ -86,7 +90,8 @@ def save_state(state):
     cutoff = (NOW - dt.timedelta(days=45)).strftime("%Y-%m-%d")
     for key in ("menu", "sent"):
         state[key] = {d: v for d, v in state[key].items() if d >= cutoff}
-    state["naver_seen"] = state["naver_seen"][-500:]
+    state.pop("naver_seen", None)  # 이전 버전 기록은 버림
+    state["naver_read"] = state["naver_read"][-500:]
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(state, f, ensure_ascii=False, indent=2, sort_keys=True)
 
@@ -149,9 +154,14 @@ def naver_images():
     found = []
     for raw in re.findall(r'https?://[a-z0-9.-]+\.pstatic\.net/[^"\'\s<>\\)]+', text, re.I):
         url = normalize(raw)
-        if "phinf" in urlparse(url).netloc and url not in found:  # 업로드된 사진만 (아이콘 등 제외)
+        # 사장님이 올린 사진(ldb-phinf)만. 방문자 리뷰, 블로그, 클립 썸네일은 제외
+        if urlparse(url).netloc == "ldb-phinf.pstatic.net" and url not in found:
             found.append(url)
-    return found
+    # 주소에 들어 있는 업로드 날짜(예: /20261016_94/) 기준 최신순
+    def uploaded(url):
+        m = re.search(r"/(\d{8})_", url)
+        return m.group(1) if m else "0"
+    return sorted(found, key=uploaded, reverse=True)
 
 
 def collect_naver(state):
@@ -167,20 +177,22 @@ def collect_naver(state):
             state["naver_alert"] = TODAY
         return
 
-    first_run = not state["naver_seen"]
-    new = [u for u in images if u not in state["naver_seen"]]
-    print(f"네이버 사진 {len(images)}개 중 새 사진 {len(new)}개")
-    for url in new[:12 if first_run else 6]:
+    first_run = not state["naver_read"]
+    new = [u for u in images if u not in state["naver_read"]]
+    limit = 3 if first_run else 6  # 첫 실행은 최신 3장만 (이번 주 식단표 찾기용)
+    print(f"네이버 사장님 사진 {len(images)}개 중 새 사진 {len(new)}개, {min(limit, len(new))}개 읽음")
+    for url in new[:limit]:
         try:
             days = read_menu(to_b64(requests.get(url, headers=WEB_HEADERS, timeout=60).content))
         except Exception as e:
             print("사진 읽기 실패:", url, e)
-            continue
-        state["naver_seen"].append(url)
+            continue  # 실패한 사진은 다음 실행 때 다시 시도
+        state["naver_read"].append(url)
+        print("읽음:", url, f"→ 식단 {len(days)}일치")
         if days:
             save_days(state, days, "네이버 소식")
     if first_run:  # 첫 실행 때 나머지 옛날 사진은 건너뜀
-        state["naver_seen"].extend(u for u in new if u not in state["naver_seen"])
+        state["naver_read"].extend(new[limit:])
 
 
 # ---------- 직접 보낸 사진 (백업 경로) ----------
