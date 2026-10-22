@@ -3,7 +3,9 @@
 - 네이버 플레이스 '소식'에 올라오는 주간 식단표를 자동으로 가져와서 Claude가 날짜별로 읽어 저장
 - 평일 10:30에 그날 메뉴 전송
 - 네이버에서 못 가져오는 날엔 봇한테 식단표 사진을 직접 보내도 똑같이 처리
-GitHub Actions가 주기적으로 실행 (상시 서버 없음)
+- 봇을 그룹방에 초대하면 자동으로 그 방에도 전송 (내보내면 자동 중단, /stop으로도 끌 수 있음)
+- "@봇 오늘의 메뉴" / "@봇 내일 메뉴" / /menu 로 물어보면 답장
+GitHub Actions로 실행: 평일 08:00~13:30은 대기 모드(바로 답장), 그 외엔 매시 정각에 한 번씩
 """
 import base64
 import datetime as dt
@@ -12,6 +14,8 @@ import io
 import json
 import os
 import re
+import sys
+import time
 from urllib.parse import parse_qs, unquote, urlparse
 
 import requests
@@ -24,15 +28,24 @@ def env(name, default=""):
 TG_TOKEN = env("TELEGRAM_TOKEN")
 ANTHROPIC_KEY = env("ANTHROPIC_API_KEY")
 ADMIN_ID = int(env("ADMIN_ID"))                        # 관리자 (나)
-CHAT_ID = env("CHAT_ID") or str(ADMIN_ID)              # 메뉴 받을 곳 (나 / 그룹 / @채널)
+CHAT_ID = env("CHAT_ID")                               # 선택: 고정으로 받을 방 하나 더
 PLACE_ID = env("NAVER_PLACE_ID", "1125744770")
 MODEL = env("CLAUDE_MODEL", "claude-sonnet-5-5")
 SEND_AFTER = env("SEND_AFTER", "10:30")                # 메뉴 보내는 시각 (KST)
 STATE_FILE = "state.json"
 
+LISTEN_UNTIL = env("LISTEN_UNTIL", "13:30")            # 대기 모드 끝나는 시각 (KST)
+
 KST = dt.timezone(dt.timedelta(hours=9))
 NOW = dt.datetime.now(KST)
 TODAY = NOW.strftime("%Y-%m-%d")
+BOT_USERNAME = ""
+
+
+def refresh_clock():
+    global NOW, TODAY
+    NOW = dt.datetime.now(KST)
+    TODAY = NOW.strftime("%Y-%m-%d")
 WEEKDAY = "월화수목금토일"
 TG_API = f"https://api.telegram.org/bot{TG_TOKEN}"
 WEB_HEADERS = {
@@ -57,8 +70,8 @@ PROMPT = """이 사진이 캠코양재타워 구내식당의 식단표(주간 �
 
 # ---------- 공통 ----------
 
-def tg(method, **params):
-    r = requests.post(f"{TG_API}/{method}", data=params, timeout=30)
+def tg(method, _timeout=30, **params):
+    r = requests.post(f"{TG_API}/{method}", data=params, timeout=_timeout)
     if not r.ok:
         raise RuntimeError(f"Telegram {method} 실패: {r.text}")
     return r.json()["result"]
@@ -75,6 +88,46 @@ def bullets(items):
     return "\n".join(f"· {m}" for m in items)
 
 
+def menu_text(menu, day=None):
+    day = day or NOW
+    label = f"{day.month}/{day.day} ({WEEKDAY[day.weekday()]})"
+    return f"🍚 캠코양재타워 구내식당 {label}\n\n{bullets(menu)}"
+
+
+def send_to(state, chat_id, text, reply_to=None):
+    """보내다가 봇이 쫓겨났거나 방이 없어졌으면 목록에서 뺌"""
+    try:
+        extra = {"reply_to_message_id": reply_to, "allow_sending_without_reply": "true"} if reply_to else {}
+        tg("sendMessage", chat_id=chat_id, text=text, **extra)
+    except Exception as e:
+        print(f"{chat_id} 전송 실패:", e)
+        if any(k in str(e) for k in ("kicked", "blocked", "chat not found", "not a member", "deactivated")):
+            state["chats"].pop(str(chat_id), None)
+
+
+def subscribe(state, chat):
+    cid = str(chat["id"])
+    if cid in state["chats"]:
+        return
+    name = chat.get("title") or chat.get("first_name") or "개인"
+    state["chats"][cid] = name
+    if cid != str(ADMIN_ID):
+        notify_admin(f"'{name}' 방에도 점심 메뉴를 보내기 시작해요.")
+    welcome = "🍚 점심 메뉴 봇이에요. 평일 10:30에 캠코양재타워 구내식당 메뉴를 보내드려요.\n그만 받으려면 /stop"
+    today_menu = state["menu"].get(TODAY)
+    if today_menu and NOW.weekday() < 5 and NOW.hour < 14:  # 점심시간 전이면 오늘 메뉴도 바로
+        welcome += "\n\n" + menu_text(today_menu)
+    send_to(state, cid, welcome)
+
+
+def unsubscribe(state, chat_id, reply=False):
+    name = state["chats"].pop(str(chat_id), None)
+    if name and str(chat_id) != str(ADMIN_ID):
+        notify_admin(f"'{name}' 방 전송을 멈췄어요.")
+    if reply:
+        send_to(state, chat_id, "메뉴 알림을 껐어요. 다시 받으려면 /start")
+
+
 def load_state():
     try:
         with open(STATE_FILE, encoding="utf-8") as f:
@@ -83,6 +136,10 @@ def load_state():
         state = {}
     for key, default in (("offset", 0), ("menu", {}), ("sent", {}), ("naver_read", []), ("naver_alert", "")):
         state.setdefault(key, default)
+    if "chats" not in state:  # 메뉴 받는 방 목록 {방번호: 이름}
+        state["chats"] = {str(ADMIN_ID): "나"}
+        if CHAT_ID:
+            state["chats"][CHAT_ID] = "CHAT_ID"
     return state
 
 
@@ -195,22 +252,82 @@ def collect_naver(state):
         state["naver_read"].extend(new[limit:])
 
 
-# ---------- 직접 보낸 사진 (백업 경로) ----------
+# ---------- 텔레그램 메시지 처리 (메뉴 질문, 방 추가/삭제, 직접 보낸 식단표) ----------
 
-def ingest_manual(state):
-    updates = tg("getUpdates", offset=state["offset"], timeout=0, allowed_updates='["message"]')
+def is_menu_question(msg, text, cmd):
+    if cmd == "/menu":
+        return True
+    if "메뉴" not in text:
+        return False
+    if msg["chat"]["type"] == "private":
+        return True
+    me = BOT_USERNAME.lower()
+    mentioned = bool(me) and f"@{me}" in text.lower()
+    replied = msg.get("reply_to_message", {}).get("from", {}).get("username", "").lower() == me
+    return mentioned or replied
+
+
+def answer_menu(state, msg, text):
+    day = NOW + dt.timedelta(days=1) if "내일" in text else NOW
+    key = day.strftime("%Y-%m-%d")
+    menu = state["menu"].get(key)
+    when = "내일" if "내일" in text else "오늘"
+    if menu:
+        reply = menu_text(menu, day)
+    elif day.weekday() >= 5:
+        reply = f"{when}은 주말이라 구내식당이 쉬어요."
+    else:
+        reply = f"{when}({day.month}/{day.day}) 메뉴는 아직 없어요. 휴무이거나 식단표가 안 올라왔어요."
+    send_to(state, msg["chat"]["id"], reply, reply_to=msg["message_id"])
+
+
+def handle_updates(state, wait=0):
+    updates = tg("getUpdates", _timeout=wait + 15, offset=state["offset"], timeout=wait,
+                 allowed_updates='["message","my_chat_member"]')
     for u in updates:
         state["offset"] = u["update_id"] + 1
-        msg = u.get("message")
-        if not msg or msg["chat"]["type"] != "private" or msg.get("from", {}).get("id") != ADMIN_ID:
+
+        if "my_chat_member" in u:  # 봇이 방에 초대되거나 쫓겨남
+            m = u["my_chat_member"]
+            status = m["new_chat_member"]["status"]
+            if status in ("member", "administrator"):
+                subscribe(state, m["chat"])
+            elif status in ("left", "kicked"):
+                unsubscribe(state, m["chat"]["id"])
             continue
 
+        msg = u.get("message")
+        if not msg:
+            continue
+        chat = msg["chat"]
+        if msg.get("migrate_to_chat_id"):  # 일반 그룹이 슈퍼그룹으로 바뀌면 방 번호가 바뀜
+            name = state["chats"].pop(str(chat["id"]), None)
+            if name:
+                state["chats"][str(msg["migrate_to_chat_id"])] = name
+            continue
+
+        text = (msg.get("text") or "").strip()
+        cmd = text.split()[0].split("@")[0].lower() if text.startswith("/") else ""
+        if cmd == "/stop":
+            unsubscribe(state, chat["id"], reply=True)
+            continue
+        if chat["type"] != "private" or cmd == "/start":
+            subscribe(state, chat)  # 그룹방 메시지나 /start → 방 등록
+        if is_menu_question(msg, text, cmd):
+            answer_menu(state, msg, text)
+            continue
+        if chat["type"] != "private" or msg.get("from", {}).get("id") != ADMIN_ID:
+            continue
+
+        # 여기부터는 관리자(나) 개인 대화
         if msg.get("photo"):
             file_id = msg["photo"][-1]["file_id"]
         elif msg.get("document", {}).get("mime_type", "").startswith("image/"):
             file_id = msg["document"]["file_id"]
         else:
-            notify_admin("식단표 사진을 보내주세요.\n'파일'로 보내면 화질이 안 깨져서 더 정확해요.")
+            rooms = ", ".join(state["chats"].values())
+            notify_admin(f"지금 메뉴 받는 방: {rooms}\n\n'메뉴'라고 보내면 오늘 메뉴를 알려드려요.\n"
+                         "식단표를 직접 넣으려면 사진을 '파일'로 보내주세요.")
             continue
 
         try:
@@ -234,21 +351,61 @@ def send_today(state):
         return
     menu = state["menu"].get(TODAY)
     if menu:
-        label = f"{NOW.month}/{NOW.day} ({WEEKDAY[NOW.weekday()]})"
-        tg("sendMessage", chat_id=CHAT_ID, text=f"🍚 캠코양재타워 구내식당 {label}\n\n{bullets(menu)}")
+        for chat_id in list(state["chats"]):
+            send_to(state, chat_id, menu_text(menu))
     else:
         notify_admin(f"오늘({TODAY}) 메뉴가 없어요. 휴무가 아니면 식단표 사진을 봇한테 보내주세요.")
     state["sent"][TODAY] = True
 
 
-def main():
+def load_bot_name():
+    global BOT_USERNAME
+    try:
+        BOT_USERNAME = tg("getMe")["username"]
+    except Exception as e:
+        print("봇 이름 확인 실패:", e)
+
+
+def run_once():
+    """매시 정각 실행: 한 번 훑고 끝"""
     state = load_state()
     try:
-        ingest_manual(state)
+        handle_updates(state)
         collect_naver(state)
         send_today(state)
     finally:
         save_state(state)
+
+
+def listen():
+    """평일 오전 대기 모드: 질문에 바로 답하고, 10:30 전송과 정각 네이버 확인도 여기서"""
+    state = load_state()
+    naver_hour = None
+    try:
+        while True:
+            refresh_clock()
+            if NOW.strftime("%H:%M") >= LISTEN_UNTIL:
+                break
+            try:
+                if naver_hour != NOW.hour:
+                    collect_naver(state)
+                    naver_hour = NOW.hour
+                send_today(state)
+                handle_updates(state, wait=50)  # 메시지가 오면 바로 깨어남
+                save_state(state)
+            except Exception as e:
+                print("대기 중 오류, 잠시 후 재시도:", e)
+                time.sleep(10)
+    finally:
+        save_state(state)
+
+
+def main():
+    load_bot_name()
+    if len(sys.argv) > 1 and sys.argv[1] == "listen":
+        listen()
+    else:
+        run_once()
 
 
 if __name__ == "__main__":
