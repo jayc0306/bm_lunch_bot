@@ -1,16 +1,102 @@
 {
-  "menu": {},
+  "menu": {
+    "2026-10-06": [
+      "장터국밥",
+      "고구마닭갈비",
+      "대파타코야끼",
+      "들기름막국수",
+      "어향가지볶음"
+    ],
+    "2026-10-07": [
+      "콩나물밥",
+      "들깨미역국",
+      "돼지고기김치찜",
+      "오징어떡볶음",
+      "연두부*양념장",
+      "옥수수맛탕"
+    ],
+    "2026-10-08": [
+      "건새우아욱국",
+      "목살캠핑구이",
+      "맛살링튀김",
+      "중화잡채",
+      "양념깻잎지"
+    ],
+    "2026-10-12": [
+      "순두부찌개",
+      "허니매콤간장치킨",
+      "파채언양식불고기",
+      "미트스파게티",
+      "감자채볶음"
+    ],
+    "2026-10-13": [
+      "가지덮밥",
+      "시래기된장국",
+      "매콤갈비찜",
+      "깻잎튀김",
+      "가지덮밥소스",
+      "탕평채"
+    ],
+    "2026-10-14": [
+      "물만둣국",
+      "바싹불고기",
+      "생선까스",
+      "붕어묵콩나물찜",
+      "오이고추된장무침"
+    ],
+    "2026-10-15": [
+      "북어국",
+      "데리야끼닭볶음",
+      "난자완스",
+      "열무비빔국수",
+      "모듬야채지"
+    ],
+    "2026-10-16": [
+      "얼큰콩나물국",
+      "쭈꾸미불고기",
+      "야채계란찜",
+      "두부강정",
+      "푸실리샐러드"
+    ],
+    "2026-10-19": [
+      "참치김치찌개",
+      "청경채불고기",
+      "콘치즈고로케",
+      "실곤약야채무침",
+      "간장고추지"
+    ],
+    "2026-10-20": [
+      "잔치국수",
+      "닭봉조림",
+      "미트볼라따뚜이",
+      "가리비살초무침",
+      "브로콜리맛살볶음"
+    ],
+    "2026-10-21": [
+      "하이라이스덮밥",
+      "팽이된장국",
+      "제육볶음",
+      "청양새우카츠",
+      "하이라이스",
+      "명엽채볶음"
+    ],
+    "2026-10-22": [
+      "짬뽕국",
+      "훈제오리단호박찜",
+      "갈비산적조림",
+      "해물야끼우동",
+      "백목이버섯냉채(?)"
+    ],
+    "2026-10-23": [
+      "어묵국",
+      "등촌샤브불고기",
+      "치킨까스유린기",
+      "소떡조림",
+      "미역줄기볶음"
+    ]
+  },
   "naver_alert": "",
-  "naver_seen": [
-    "https://ldb-phinf.pstatic.net/20250902_18/1756739148877y27mw_JPEG/IMG_7491.jpeg",
-    "https://clip-service-phinf.pstatic.net/MjAyNjA3MjVfMTEz/MDAxNzg0OTg5MTY4Mjk3.Ec7SLC3_wHPm1GBpVP5UkEEFF1oXaCMpM1Xf5rJ8WAAg.2FksLXGkVWHqK5fXZFSPbkoGAlyEckdJ9znQLD9WLwsg.JPEG/PublishThumb_20260725_231909_198.jpg",
-    "https://ldb-phinf.pstatic.net/20250902_200/1756739191621w2mRN_JPEG/IMG_7492.jpeg",
-    "https://pup-review-phinf.pstatic.net/MjAyNjA2MTNfMjkz/MDAxNzgxMjc2NTQ4MTc0.KuX_PJhpWLG_JRyyQcvEZrc621LB0w8G4AZEBLeYL54g.wMqcWVJaTB6qQA3QI-jBZj13zS5AeE-yUnKtEb_lMh0g.JPEG/20260612_124414.jpg.jpg",
-    "https://pup-review-phinf.pstatic.net/MjAyNjA5MTBfMjM4/MDAxNzg5MDE2OTExMDY5.vLelaTDL73nCcumR10r90RejJ0TTySrxFdP_S8xt68kg.CaoV_1wDqScaTM--MU8e_kpPLdCl1fzocIo4ciZgvIYg.JPEG/IMG_3218.jpeg",
-    "https://pup-review-phinf.pstatic.net/MjAyNjA5MTBfMjUy/MDAxNzg5MDE2OTEwMjM3.2lXYaPQudmEJoX2R0CKPqci9TCbcjoLyL33SyYMJggsg.YcDYfKjmLHN1HW6IxZOFEjtk6n3Kme6d4PZstbVS2WAg.JPEG/IMG_3221.jpeg",
-    "https://pup-review-phinf.pstatic.net/MjAyNjA5MTBfMTIy/MDAxNzg5MDE2OTExMDg0.pr5M_F8otp_WFtV6oivGndc-4Yn5iM4wk1C4rScbVFkg.SKX_gWMGWt4hAowiyvVu7ChSeEgc2wtHOqt29cQG6UAg.JPEG/IMG_3219.jpeg",
-    "https://pup-review-phinf.pstatic.net/MjAyNjA5MTBfMTkz/MDAxNzg5MDE2OTEwNjA0.km2EpiMhi3VSentRbfKk0QSVzZ5_xFRVlwKO0KGxNcgg.q1lKLx9986vj6sOgxwvN05DqJI5j6RNDCFYR36Lmu1wg.JPEG/IMG_3220.jpeg",
-    "https://blogpfthumb-phinf.pstatic.net/MjAxNzExMDNfNTYg/MDAxNTA5NzA5MTg2NDM0.s2Zfg3b1bSyfqBkHI6xkkMKdl2oU8HuCy9F3S9NkMlYg.AwW7xLJO8EiiXu5t8Zkr-jTLmHJKfFPQykkk65R_ziIg.JPEG.joon_journey/DSC04763.JPG",
+  "naver_read": [
     "https://ldb-phinf.pstatic.net/20261016_94/17921201705757hyg8_JPEG/edited-1792120169792-0.jpg",
     "https://ldb-phinf.pstatic.net/20261008_218/1791426025445KhNA4_JPEG/edited-1791426024734-0.jpg",
     "https://ldb-phinf.pstatic.net/20261002_206/17909075259575qG4q_JPEG/edited-1790907525364-0.jpg",
@@ -33,14 +119,15 @@
     "https://ldb-phinf.pstatic.net/20260605_299/1780627940403naEjf_JPEG/IMG_5430.jpg",
     "https://ldb-phinf.pstatic.net/20260601_11/17802799083159m1ey_JPEG/IMG_4705.jpg",
     "https://ldb-phinf.pstatic.net/20260526_126/1779763600676nO6z6_JPEG/IMG_4579.jpg",
+    "https://ldb-phinf.pstatic.net/20250902_18/1756739148877y27mw_JPEG/IMG_7491.jpeg",
+    "https://ldb-phinf.pstatic.net/20250902_200/1756739191621w2mRN_JPEG/IMG_7492.jpeg",
+    "https://ldb-phinf.pstatic.net/20250106_72/1736091010131Xx3SV_PNG/%C4%B7%C4%DA_%B0%A1%B0%DD_%BE%C8%B3%BB-001.png",
     "https://ldb-phinf.pstatic.net/20241213_150/173406060921607Uw9_PNG/quality_restoration_20241107001050726.png",
     "https://ldb-phinf.pstatic.net/20241107_99/1730979600514k7Pjg_PNG/quality_restoration_20241107203415167.PNG",
     "https://ldb-phinf.pstatic.net/20241107_292/17309796256078WsaF_PNG/quality_restoration_20241107203435294.PNG",
-    "https://ldb-phinf.pstatic.net/20241107_198/1730979643223uu6iA_PNG/quality_restoration_20241107203456176.PNG",
-    "https://phinf.pstatic.net/contact/20210426_90/1619408806659yUdaA_PNG/%C1%A6%B8%F1%C0%BB_%C0%D4%B7%C2%C7%D8%C1%D6%BC%BC%BF%E4._001_%2840%29.png",
-    "https://ldb-phinf.pstatic.net/20250106_72/1736091010131Xx3SV_PNG/%C4%B7%C4%DA_%B0%A1%B0%DD_%BE%C8%B3%BB-001.png"
+    "https://ldb-phinf.pstatic.net/20241107_198/1730979643223uu6iA_PNG/quality_restoration_20241107203456176.PNG"
   ],
-  "offset": 0,
+  "offset": 53191727,
   "sent": {
     "2026-10-22": true
   }
