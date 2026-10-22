@@ -1,4 +1,8 @@
 {
+  "chats": {
+    "-1004412568879": "블록미디어 워크방",
+    "6743016133": "나"
+  },
   "menu": {
     "2026-10-06": [
       "장터국밥",
@@ -127,7 +131,7 @@
     "https://ldb-phinf.pstatic.net/20241107_292/17309796256078WsaF_PNG/quality_restoration_20241107203435294.PNG",
     "https://ldb-phinf.pstatic.net/20241107_198/1730979643223uu6iA_PNG/quality_restoration_20241107203456176.PNG"
   ],
-  "offset": 53191727,
+  "offset": 53191728,
   "sent": {
     "2026-10-22": true
   }
